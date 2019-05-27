@@ -1,0 +1,11 @@
+#!/bin/bash
+
+inotifywait --exclude \.elm\.sw* -re close_write -m src/ |
+while read -r directory events filename; do
+    if [[ $filename == *elm ]]; then
+        echo ""
+        echo "----------------------------------"
+        echo ""
+        elm make src/Main.elm --debug
+    fi
+done
