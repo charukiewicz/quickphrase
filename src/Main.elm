@@ -243,7 +243,7 @@ layoutOptions =
 
 view : Model -> Browser.Document Msg
 view model =
-    { title = "FastPhrase"
+    { title = "QuickPhrase"
     , body =
         [ Element.layoutWith
             layoutOptions
@@ -448,6 +448,6 @@ gameDisplay model =
         , Font.size 50
         , Font.center
         ]
-        [ el [ Font.center ] <| text <| Maybe.withDefault "?" <| List.head model.seenWords
-        , el [ Font.center, Font.color (rgb255 255 255 255) ] <| text <| Maybe.withDefault "Whoops!" <| Maybe.map String.fromInt model.gameTimer
+        [ text <| Maybe.withDefault "?" <| List.head model.seenWords
+        , el [ Font.color (rgb 255 255 255) ] <| text <| Maybe.withDefault "Whoops!" <| Maybe.map String.fromInt model.gameTimer
         ]
