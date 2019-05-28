@@ -6,6 +6,6 @@ while read -r directory events filename; do
         echo ""
         echo "----------------------------------"
         echo ""
-        elm make src/Main.elm --debug
+        elm make src/Main.elm --output ./dist/app.js
     fi
 done

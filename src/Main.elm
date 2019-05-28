@@ -152,11 +152,14 @@ update msg model =
                         |> List.map (\cat -> Dict.get cat model.wordList)
                         |> List.filterMap identity
                         |> List.concat
+
+                randGen =
+                    Random.int 1 <| List.length words
             in
             { model
-                | randGen = Just <| Random.int 1 <| List.length words
+                | randGen = Just <| randGen
             }
-                |> with (Task.perform identity <| Task.succeed StartGame)
+                |> with (Random.generate NextRoundWithRand randGen)
 
         StartGame ->
             { model
@@ -286,7 +289,7 @@ controlDisplay model =
         , spacing 10
         , Font.size 40
         ]
-        [ row
+        [ wrappedRow
             [ spacing 10
             , width fill
             ]
@@ -299,7 +302,7 @@ controlDisplay model =
                 (model.gameMode == Just TimedWord)
                 (SetGameMode TimedWord)
             ]
-        , row
+        , wrappedRow
             [ spacing 10, centerY ]
             [ Input.text
                 [ Background.color (rgb255 23 35 60)
