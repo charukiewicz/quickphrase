@@ -249,8 +249,8 @@ view model =
     { title = "QuickPhrase"
     , body =
         [ Element.layout
-            ([ Background.color (rgb255 23 35 60)
-             , Font.color (rgb255 255 152 0)
+            ([ Background.color backgroundColor
+             , Font.color primaryColor
              , Font.family [ Font.monospace ]
              ]
                 ++ (if model.wordCategorySelect then
@@ -288,7 +288,7 @@ controlDisplay model =
         , spacing 10
         , Font.size 40
         ]
-        [ wrappedRow
+        [ row
             [ spacing 30
             , width fill
             ]
@@ -304,8 +304,8 @@ controlDisplay model =
         , row
             []
             [ Input.text
-                [ Background.color (rgb255 23 35 60)
-                , Border.color (rgb255 220 131 0)
+                [ Background.color backgroundColor
+                , Border.color primaryBorderColor
                 , Border.width 4
                 ]
                 { onChange = SetGameLength
@@ -347,10 +347,11 @@ categoryControl : Model -> Element Msg
 categoryControl model =
     column
         [ width fill ]
+    <|
         [ el
             ([ width fill
              , pointer
-             , Border.color (rgb255 220 131 0)
+             , Border.color primaryBorderColor
              , Border.width 4
              , padding 10
              ]
@@ -368,19 +369,21 @@ categoryControl model =
              else
                 paragraph [] <| List.intersperse (text ", ") <| List.map text model.selectedCategories
             )
-        , el
-            ([ width fill ]
-                ++ (case model.wordCategorySelect of
-                        True ->
-                            [ inFront <|
-                                column
-                                    [ Border.color (rgb255 220 131 0)
+        ]
+            ++ (case model.wordCategorySelect of
+                    True ->
+                        [ el
+                            [ width fill
+                            , height <| px 0
+                            , inFront <|
+                                (column
+                                    [ Border.color primaryBorderColor
                                     , Border.width 4
-                                    , Background.color (rgb255 23 35 60)
+                                    , Background.color backgroundColor
                                     , width fill
                                     , htmlAttribute <| Html.Attributes.style "z-index" "10"
                                     ]
-                                <|
+                                 <|
                                     List.map
                                         (\cat ->
                                             el
@@ -390,8 +393,8 @@ categoryControl model =
                                                  , pointer
                                                  ]
                                                     ++ (if List.member cat model.selectedCategories then
-                                                            [ Background.color (rgb255 255 152 0)
-                                                            , Font.color (rgb255 23 35 60)
+                                                            [ Background.color primaryColor
+                                                            , Font.color backgroundColor
                                                             ]
 
                                                         else
@@ -401,14 +404,14 @@ categoryControl model =
                                                 (text cat)
                                         )
                                         (Dict.keys model.wordList)
+                                )
                             ]
+                            (text "")
+                        ]
 
-                        False ->
-                            []
-                   )
-            )
-            (text "")
-        ]
+                    False ->
+                        []
+               )
 
 
 onClickStopPropagation : msg -> Attribute msg
@@ -433,7 +436,7 @@ renderBtn label isActive msg =
 btnStyle : Bool -> List (Attribute msg)
 btnStyle active =
     [ Border.solid
-    , Border.color (rgb255 220 131 0)
+    , Border.color primaryBorderColor
     , Border.width 4
     , padding 20
     , centerX
@@ -441,8 +444,8 @@ btnStyle active =
     , Font.center
     ]
         ++ (if active then
-                [ Background.color (rgb255 255 152 0)
-                , Font.color (rgb255 23 35 60)
+                [ Background.color primaryColor
+                , Font.color backgroundColor
                 ]
 
             else
@@ -456,7 +459,32 @@ gameDisplay model =
         [ centerX
         , centerY
         , Font.size 50
+        , spacing 10
         ]
         [ el [ centerX ] <| text <| Maybe.withDefault "?" <| List.head model.seenWords
-        , el [ centerX, Font.color (rgb 255 255 255) ] <| text <| Maybe.withDefault "Whoops!" <| Maybe.map String.fromInt model.gameTimer
+        , el [ centerX, Font.color whiteColor ] <| text <| Maybe.withDefault "Whoops!" <| Maybe.map String.fromInt model.gameTimer
         ]
+
+
+
+-- COLORS
+
+
+primaryColor : Color
+primaryColor =
+    rgb255 255 152 0
+
+
+primaryBorderColor : Color
+primaryBorderColor =
+    rgb255 220 131 0
+
+
+backgroundColor : Color
+backgroundColor =
+    rgb255 23 35 60
+
+
+whiteColor : Color
+whiteColor =
+    rgb255 255 255 255
