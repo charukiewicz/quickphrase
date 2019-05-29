@@ -248,8 +248,7 @@ view : Model -> Browser.Document Msg
 view model =
     { title = "QuickPhrase"
     , body =
-        [ Element.layoutWith
-            layoutOptions
+        [ Element.layout
             ([ Background.color (rgb255 23 35 60)
              , Font.color (rgb255 255 152 0)
              , Font.family [ Font.monospace ]
@@ -290,7 +289,7 @@ controlDisplay model =
         , Font.size 40
         ]
         [ wrappedRow
-            [ spacing 10
+            [ spacing 30
             , width fill
             ]
             [ renderBtn
@@ -302,8 +301,8 @@ controlDisplay model =
                 (model.gameMode == Just TimedWord)
                 (SetGameMode TimedWord)
             ]
-        , wrappedRow
-            [ spacing 10, centerY ]
+        , row
+            []
             [ Input.text
                 [ Background.color (rgb255 23 35 60)
                 , Border.color (rgb255 220 131 0)
@@ -318,11 +317,11 @@ controlDisplay model =
                 , label = Input.labelLeft [ centerY ] (text "Round Length")
                 }
             ]
-        , wrappedRow [ spacing 10, centerY, width fill ]
+        , row [ spacing 10, centerY, width fill ]
             [ text "Categories"
             , categoryControl model
             ]
-        , startGameBtn model
+        , row [ width fill ] [ startGameBtn model ]
         ]
 
 
@@ -346,62 +345,70 @@ startGameBtn model =
 
 categoryControl : Model -> Element Msg
 categoryControl model =
-    el
-        ([ width fill
-         ]
-            ++ (if not model.wordCategorySelect then
-                    [ Border.color (rgb255 220 131 0)
-                    , Border.width 4
-                    , padding 4
-                    ]
+    column
+        [ width fill ]
+        [ el
+            ([ width fill
+             , pointer
+             , Border.color (rgb255 220 131 0)
+             , Border.width 4
+             , padding 10
+             ]
+                ++ (case model.wordCategorySelect of
+                        True ->
+                            []
 
-                else
-                    []
-               )
-        )
-    <|
-        el
-            [ width fill
-            , pointer
-            , case model.wordCategorySelect of
-                True ->
-                    inFront <|
-                        column
-                            [ Border.color (rgb255 220 131 0)
-                            , Border.width 4
-                            , Background.color (rgb255 23 35 60)
-                            , width fill
-                            , htmlAttribute <| Html.Attributes.style "z-index" "10"
-                            ]
-                        <|
-                            List.map
-                                (\cat ->
-                                    el
-                                        ([ onClickStopPropagation <| ToggleCategory cat
-                                         , width fill
-                                         ]
-                                            ++ (if List.member cat model.selectedCategories then
-                                                    [ Background.color (rgb255 255 152 0)
-                                                    , Font.color (rgb255 23 35 60)
-                                                    ]
-
-                                                else
-                                                    []
-                                               )
-                                        )
-                                        (text cat)
-                                )
-                                (Dict.keys model.wordList)
-
-                False ->
-                    onClick <| ToggleCategorySelection True
-            ]
+                        False ->
+                            [ onClick <| ToggleCategorySelection True ]
+                   )
+            )
             (if List.isEmpty model.selectedCategories then
                 text "Select"
 
              else
                 paragraph [] <| List.intersperse (text ", ") <| List.map text model.selectedCategories
             )
+        , el
+            ([ width fill ]
+                ++ (case model.wordCategorySelect of
+                        True ->
+                            [ inFront <|
+                                column
+                                    [ Border.color (rgb255 220 131 0)
+                                    , Border.width 4
+                                    , Background.color (rgb255 23 35 60)
+                                    , width fill
+                                    , htmlAttribute <| Html.Attributes.style "z-index" "10"
+                                    ]
+                                <|
+                                    List.map
+                                        (\cat ->
+                                            el
+                                                ([ onClickStopPropagation <| ToggleCategory cat
+                                                 , width fill
+                                                 , paddingXY 10 4
+                                                 , pointer
+                                                 ]
+                                                    ++ (if List.member cat model.selectedCategories then
+                                                            [ Background.color (rgb255 255 152 0)
+                                                            , Font.color (rgb255 23 35 60)
+                                                            ]
+
+                                                        else
+                                                            []
+                                                       )
+                                                )
+                                                (text cat)
+                                        )
+                                        (Dict.keys model.wordList)
+                            ]
+
+                        False ->
+                            []
+                   )
+            )
+            (text "")
+        ]
 
 
 onClickStopPropagation : msg -> Attribute msg
@@ -449,8 +456,7 @@ gameDisplay model =
         [ centerX
         , centerY
         , Font.size 50
-        , Font.center
         ]
-        [ text <| Maybe.withDefault "?" <| List.head model.seenWords
-        , el [ Font.color (rgb 255 255 255) ] <| text <| Maybe.withDefault "Whoops!" <| Maybe.map String.fromInt model.gameTimer
+        [ el [ centerX ] <| text <| Maybe.withDefault "?" <| List.head model.seenWords
+        , el [ centerX, Font.color (rgb 255 255 255) ] <| text <| Maybe.withDefault "Whoops!" <| Maybe.map String.fromInt model.gameTimer
         ]
