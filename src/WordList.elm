@@ -11,7 +11,7 @@ wordList =
         , ( "Hard", hard )
         , ( "Animals", animals )
         , ( "Culinary", culinary )
-        , ( "Household Items", householdItems )
+        , ( "Items", items )
         , ( "People", people )
         , ( "Travel", travel )
         ]
@@ -1705,8 +1705,8 @@ culinary =
     ]
 
 
-householdItems : List String
-householdItems =
+items : List String
+items =
     [ "pogo stick"
     , "meal"
     , "baseboards"

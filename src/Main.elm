@@ -287,8 +287,9 @@ controlDisplay model =
         , padding 10
         , spacing 10
         , Font.size 40
+        , height shrink
         ]
-        [ row
+        [ wrappedRow
             [ spacing 30
             , width fill
             ]
@@ -372,7 +373,7 @@ categoryControl model =
         ]
             ++ (case model.wordCategorySelect of
                     True ->
-                        [ el
+                        [ row
                             [ width fill
                             , height <| px 0
                             , inFront <|
@@ -406,7 +407,7 @@ categoryControl model =
                                         (Dict.keys model.wordList)
                                 )
                             ]
-                            (text "")
+                            []
                         ]
 
                     False ->
