@@ -33,12 +33,13 @@ main =
 
 type alias Model =
     { gameMode : Maybe GameMode
-    , gameLength : Maybe Int
-    , gameActive : Bool
-    , gameTimer : Maybe Int
+    , gameRoundLength : Maybe Int
+    , gameRoundActive : Bool
+    , gameRoundTimer : Maybe Int
     , wordList : Dict String (List String)
-    , wordCategorySelect : Bool
+    , categorySelectionOpen : Bool
     , selectedCategories : List String
+    , selectedWords : List String
     , seenWords : List String
     , randGen : Maybe (Random.Generator Int)
     }
@@ -52,12 +53,13 @@ type GameMode
 init : () -> ( Model, Cmd Msg )
 init _ =
     { gameMode = Nothing
-    , gameLength = Nothing
-    , gameActive = False
-    , gameTimer = Nothing
+    , gameRoundLength = Nothing
+    , gameRoundActive = False
+    , gameRoundTimer = Nothing
     , wordList = WordList.wordList
-    , wordCategorySelect = False
+    , categorySelectionOpen = False
     , selectedCategories = []
+    , selectedWords = []
     , seenWords = []
     , randGen = Nothing
     }
@@ -75,7 +77,7 @@ with a b =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model.gameTimer of
+    case model.gameRoundTimer of
         Just time ->
             Time.every 1000 (\_ -> Tick time)
 
@@ -93,9 +95,9 @@ type Msg
     | ToggleCategorySelection Bool
     | ToggleCategory String
     | InitializeGameState
-    | StartGame
-    | NextRound
-    | NextRoundWithRand Int
+    | StartRound
+    | RandGen (Int -> Msg)
+    | NextRound Int
     | Tick Int
     | NoOp
 
@@ -106,7 +108,7 @@ update msg model =
         SetGameMode gm ->
             { model
                 | gameMode = Just gm
-                , gameLength =
+                , gameRoundLength =
                     case gm of
                         TimedRound ->
                             Just 60
@@ -118,7 +120,7 @@ update msg model =
 
         SetGameLength gl ->
             { model
-                | gameLength =
+                | gameRoundLength =
                     String.toInt gl
                         |> (\newGl ->
                                 case ( newGl, gl ) of
@@ -126,7 +128,7 @@ update msg model =
                                         Nothing
 
                                     ( Nothing, _ ) ->
-                                        model.gameLength
+                                        model.gameRoundLength
 
                                     ( Just _, _ ) ->
                                         newGl
@@ -135,7 +137,7 @@ update msg model =
                 |> with Cmd.none
 
         ToggleCategorySelection isOpen ->
-            { model | wordCategorySelect = isOpen }
+            { model | categorySelectionOpen = isOpen }
                 |> with Cmd.none
 
         ToggleCategory category ->
@@ -158,22 +160,23 @@ update msg model =
             in
             { model
                 | randGen = Just <| randGen
+                , selectedWords = words
             }
-                |> with (Random.generate NextRoundWithRand randGen)
+                |> with (Random.generate NextRound randGen)
 
-        StartGame ->
+        StartRound ->
             { model
-                | gameActive = True
-                , gameTimer = model.gameLength
+                | gameRoundActive = True
+                , gameRoundTimer = model.gameRoundLength
             }
                 |> with Cmd.none
 
-        NextRound ->
+        RandGen recvMsg ->
             let
                 randCmd =
                     case model.randGen of
                         Just generator ->
-                            Random.generate NextRoundWithRand generator
+                            Random.generate recvMsg generator
 
                         Nothing ->
                             Cmd.none
@@ -181,43 +184,59 @@ update msg model =
             model
                 |> with randCmd
 
-        NextRoundWithRand int ->
+        NextRound int ->
             let
-                word =
-                    model.selectedCategories
-                        |> List.map (\cat -> Dict.get cat model.wordList)
-                        |> List.filterMap identity
-                        |> List.concat
+                ( newWord, alreadySeen ) =
+                    model.selectedWords
                         |> List.drop (int - 1)
                         |> List.head
-                        |> Maybe.withDefault ""
+                        |> Maybe.map (\word -> ( word, List.member word model.seenWords ))
+                        |> Maybe.withDefault ( "", True )
+
+                selectedWordCount =
+                    List.length model.selectedWords
+
+                seenWordCount =
+                    List.length model.seenWords
             in
-            { model
-                | gameTimer = Nothing
-                , seenWords = word :: model.seenWords
-            }
-                |> with (Task.perform identity <| Task.succeed StartGame)
+            if not alreadySeen then
+                { model
+                    | gameRoundTimer = Nothing -- Clear the timer before the next round
+                    , seenWords = newWord :: model.seenWords
+                }
+                    |> with (Task.perform identity <| Task.succeed StartRound)
+
+            else if seenWordCount < selectedWordCount then
+                model
+                    |> with (Task.perform identity <| Task.succeed <| RandGen NextRound)
+
+            else
+                { model
+                    | gameRoundTimer = Nothing
+                    , gameRoundActive = False
+                }
+                    |> with Cmd.none
 
         Tick time ->
             let
                 newGameTimer =
-                    model.gameTimer
+                    model.gameRoundTimer
                         |> Maybe.map (\x -> x - 1)
             in
             (case newGameTimer of
                 Just 0 ->
                     { model
-                        | gameTimer = Nothing
-                        , gameActive = False
+                        | gameRoundTimer = Nothing
+                        , gameRoundActive = False
                     }
 
                 Just _ ->
-                    { model | gameTimer = newGameTimer }
+                    { model | gameRoundTimer = newGameTimer }
 
                 Nothing ->
                     { model
-                        | gameTimer = Nothing
-                        , gameActive = False
+                        | gameRoundTimer = Nothing
+                        , gameRoundActive = False
                     }
             )
                 |> with Cmd.none
@@ -253,11 +272,11 @@ view model =
              , Font.color primaryColor
              , Font.family [ Font.monospace ]
              ]
-                ++ (if model.wordCategorySelect then
+                ++ (if model.categorySelectionOpen then
                         [ onClick <| ToggleCategorySelection False ]
 
-                    else if model.gameActive then
-                        [ onClick NextRound ]
+                    else if model.gameRoundActive then
+                        [ onClick <| RandGen NextRound ]
 
                     else
                         []
@@ -270,7 +289,7 @@ view model =
 
 gameRender : Model -> Element Msg
 gameRender model =
-    case model.gameActive of
+    case model.gameRoundActive of
         True ->
             gameDisplay model
 
@@ -311,7 +330,7 @@ controlDisplay model =
                 ]
                 { onChange = SetGameLength
                 , text =
-                    model.gameLength
+                    model.gameRoundLength
                         |> Maybe.map String.fromInt
                         |> Maybe.withDefault ""
                 , placeholder = Just <| Input.placeholder [] (text "Seconds")
@@ -330,7 +349,7 @@ startGameBtn : Model -> Element Msg
 startGameBtn model =
     let
         readyToStart =
-            model.gameMode /= Nothing && model.gameLength /= Nothing && (not <| List.isEmpty model.selectedCategories)
+            model.gameMode /= Nothing && model.gameRoundLength /= Nothing && (not <| List.isEmpty model.selectedCategories)
     in
     Input.button
         (btnStyle readyToStart)
@@ -356,7 +375,7 @@ categoryControl model =
              , Border.width 4
              , padding 10
              ]
-                ++ (case model.wordCategorySelect of
+                ++ (case model.categorySelectionOpen of
                         True ->
                             []
 
@@ -371,7 +390,7 @@ categoryControl model =
                 paragraph [] <| List.intersperse (text ", ") <| List.map text model.selectedCategories
             )
         ]
-            ++ (case model.wordCategorySelect of
+            ++ (case model.categorySelectionOpen of
                     True ->
                         [ row
                             [ width fill
@@ -463,7 +482,7 @@ gameDisplay model =
         , spacing 10
         ]
         [ el [ centerX ] <| text <| Maybe.withDefault "?" <| List.head model.seenWords
-        , el [ centerX, Font.color whiteColor ] <| text <| Maybe.withDefault "Whoops!" <| Maybe.map String.fromInt model.gameTimer
+        , el [ centerX, Font.color whiteColor ] <| text <| Maybe.withDefault "Whoops!" <| Maybe.map String.fromInt model.gameRoundTimer
         ]
 
 
